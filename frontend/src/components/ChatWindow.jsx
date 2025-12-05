@@ -16,7 +16,7 @@ const ChatWindow = ({ channelId, currentUser, onBack }) => {
 
   const loadMessages = async (pageNumber) => {
     const res = await API.get(
-      `/messages/${channelId}?page=${pageNumber}&limit=20`
+      `/api/messages/${channelId}?page=${pageNumber}&limit=20`
     );
 
     if (pageNumber === 1) {
@@ -28,47 +28,60 @@ const ChatWindow = ({ channelId, currentUser, onBack }) => {
     setHasMore(res.data.hasMore);
   };
 
+  // 1. Initialize Socket Connection (Once)
   useEffect(() => {
     const token = localStorage.getItem("token");
+    if (!token) return;
 
-    // Create socket instance only once
     if (!socketRef.current) {
-      const socket = io("http://localhost:5000", {
+      const socket = io(`${import.meta.env.VITE_BACKEND_URL}`, {
         transports: ["websocket", "polling"],
         auth: { token }
       });
 
       socketRef.current = socket;
 
-      // Debug: See if socket connected
       socket.on("connect", () => {
         console.log("🔥 SOCKET CONNECTED:", socket.id);
       });
 
-      // Handle connection errors
       socket.on("connect_error", (err) => {
         console.error("❌ SOCKET CONNECTION ERROR:", err.message);
       });
-
-      // Listen to new messages
-      socket.on("newMessage", (msg) => {
-        if (msg.channelId === channelId) {
-          setMessages((prev) => [...prev, msg]);
-          scrollToBottom();
-        }
-      });
     }
 
-    // Join channel when channelId changes
-    if (socketRef.current && channelId) {
-      socketRef.current.emit("joinChannel", channelId);
-    }
-
-    // Cleanup on component unmount
     return () => {
-      if (socketRef.current && channelId) {
-        socketRef.current.emit("leaveChannel", channelId);
+      // Optional: disconnect on unmount if desired, but often better to keep alive for SPA
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+        socketRef.current = null;
       }
+    };
+  }, []);
+
+  // 2. Handle Channel Events & Message Listening (When channelId changes)
+  useEffect(() => {
+    if (!socketRef.current || !channelId) return;
+    const socket = socketRef.current;
+
+    // Join new channel
+    socket.emit("joinChannel", channelId);
+
+    // Handler for new messages - uses current channelId scope
+    const handleNewMessage = (msg) => {
+      if (msg.channelId === channelId) {
+        setMessages((prev) => [...prev, msg]);
+        scrollToBottom();
+      }
+    };
+
+    // Attach listener
+    socket.on("newMessage", handleNewMessage);
+
+    // Cleanup: leave channel and remove listener
+    return () => {
+      socket.emit("leaveChannel", channelId);
+      socket.off("newMessage", handleNewMessage);
     };
   }, [channelId]);
 
@@ -173,11 +186,10 @@ const ChatWindow = ({ channelId, currentUser, onBack }) => {
                   {/* Avatar */}
                   <div className="`flex-shrink-0`">
                     <div
-                      className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm ${
-                        isOwnMessage
-                          ? "bg-gradient-to-r from-purple-500 to-blue-500"
-                          : "bg-gradient-to-r from-green-500 to-teal-500"
-                      }`}
+                      className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm ${isOwnMessage
+                        ? "bg-gradient-to-r from-purple-500 to-blue-500"
+                        : "bg-gradient-to-r from-green-500 to-teal-500"
+                        }`}
                     >
                       {msg.sender?.username?.charAt(0)?.toUpperCase()}
                     </div>
@@ -185,17 +197,15 @@ const ChatWindow = ({ channelId, currentUser, onBack }) => {
 
                   {/* Message Bubble */}
                   <div
-                    className={`relative ${
-                      isOwnMessage
-                        ? "bg-gradient-to-r from-purple-600 to-blue-600 text-white"
-                        : "backdrop-blur-xl bg-white/10 border border-white/20 text-white"
-                    } rounded-2xl px-4 py-3 shadow-lg`}
+                    className={`relative ${isOwnMessage
+                      ? "bg-gradient-to-r from-purple-600 to-blue-600 text-white"
+                      : "backdrop-blur-xl bg-white/10 border border-white/20 text-white"
+                      } rounded-2xl px-4 py-3 shadow-lg`}
                   >
                     {/* Username */}
                     <div
-                      className={`text-xs font-semibold mb-1 flex items-center gap-1 ${
-                        isOwnMessage ? "text-purple-200" : "text-gray-300"
-                      }`}
+                      className={`text-xs font-semibold mb-1 flex items-center gap-1 ${isOwnMessage ? "text-purple-200" : "text-gray-300"
+                        }`}
                     >
                       <User className="h-3 w-3" />
                       {msg.sender?.username}
@@ -206,9 +216,8 @@ const ChatWindow = ({ channelId, currentUser, onBack }) => {
 
                     {/* Timestamp */}
                     <div
-                      className={`text-xs mt-2 flex items-center gap-1 ${
-                        isOwnMessage ? "text-purple-200" : "text-gray-400"
-                      }`}
+                      className={`text-xs mt-2 flex items-center gap-1 ${isOwnMessage ? "text-purple-200" : "text-gray-400"
+                        }`}
                     >
                       <Clock className="h-3 w-3" />
                       {formatTime(msg.createdAt)}

@@ -15,7 +15,7 @@ export const usePresence = () => {
 
     const token = localStorage.getItem("token");
 
-    const s = io("http://localhost:5000", {
+    const s = io(import.meta.env.VITE_BACKEND_URL, {
       auth: { token },
     });
 
@@ -32,7 +32,7 @@ export const usePresence = () => {
       if (s.connected) {
         s.emit("heartbeat");
       }
-    }, 30000); 
+    }, 30000);
 
     // Explicit disconnect on page unload
     const handleBeforeUnload = () => {
@@ -52,7 +52,7 @@ export const usePresence = () => {
   // Fetch initial users from API
   useEffect(() => {
     const load = async () => {
-      const res = await API.get("/presence");
+      const res = await API.get("/api/presence");
       setUsers(res.data.onlineUsers);
     };
     load();

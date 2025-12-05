@@ -31,7 +31,7 @@ const Sidebar = ({ selectedChannel, onSelectChannel }) => {
 
   const loadChannels = async () => {
     try {
-      const res = await API.get("/channels");
+      const res = await API.get("/api/channels");
       setChannels(res.data.channels);
     } catch (err) {
       console.error("Failed to load channels:", err);
@@ -47,7 +47,7 @@ const Sidebar = ({ selectedChannel, onSelectChannel }) => {
     if (!newChannel.trim()) return;
 
     try {
-      await API.post("/channels/create", { name: newChannel });
+      await API.post("/api/channels/create", { name: newChannel });
       setNewChannel("");
       loadChannels();
     } catch (err) {
@@ -60,7 +60,7 @@ const Sidebar = ({ selectedChannel, onSelectChannel }) => {
     if (!renameValue.trim()) return;
 
     try {
-      await API.put(`/channels/update/${editChannel._id}`, {
+      await API.put(`/api/channels/update/${editChannel._id}`, {
         name: renameValue,
       });
 
@@ -75,7 +75,7 @@ const Sidebar = ({ selectedChannel, onSelectChannel }) => {
   // DELETE
   const handleDeleteChannel = async () => {
     try {
-      await API.delete(`/channels/delete/${deleteConfirm._id}`);
+      await API.delete(`/api/channels/delete/${deleteConfirm._id}`);
 
       setDeleteConfirm(null);
       loadChannels();
@@ -87,7 +87,7 @@ const Sidebar = ({ selectedChannel, onSelectChannel }) => {
   // JOIN
   const handleJoinChannel = async (channelId) => {
     try {
-      const res = await API.post("/channels/join", { channelId });
+      const res = await API.post("/api/channels/join", { channelId });
 
       if (res.status === 200 || res.data.message === "Already a member") {
         onSelectChannel(channelId);
@@ -156,10 +156,9 @@ const Sidebar = ({ selectedChannel, onSelectChannel }) => {
               transition-all duration-300 border border-white/10
               shadow-[0_4px_10px_rgba(0,0,0,0.4)]
               backdrop-blur-sm cursor-pointer group
-              ${
-                selectedChannel === ch._id
-                  ? "`bg-gradient-to-r from-blue-600 to-blue-500 shadow-[0_4px_25px_rgba(0,0,255,0.4)] scale-[1.03]"
-                  : "bg-white/5 hover:bg-white/10 hover:scale-[1.02]"
+              ${selectedChannel === ch._id
+                ? "`bg-gradient-to-r from-blue-600 to-blue-500 shadow-[0_4px_25px_rgba(0,0,255,0.4)] scale-[1.03]"
+                : "bg-white/5 hover:bg-white/10 hover:scale-[1.02]"
               }
             `}
           >
