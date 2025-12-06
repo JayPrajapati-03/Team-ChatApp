@@ -34,7 +34,7 @@ const ChatWindow = ({ channelId, currentUser, onBack }) => {
     if (!token) return;
 
     if (!socketRef.current) {
-      const socket = io(`${import.meta.env.VITE_BACKEND_URL}`, {
+      const socket = io(`${import.meta.env.VITE_BACKEND_URL.replace(/\/api\/?$/, "")}`, {
         transports: ["websocket", "polling"],
         auth: { token }
       });

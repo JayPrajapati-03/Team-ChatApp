@@ -15,7 +15,7 @@ export const usePresence = () => {
 
     const token = localStorage.getItem("token");
 
-    const s = io(import.meta.env.VITE_BACKEND_URL, {
+    const s = io(import.meta.env.VITE_BACKEND_URL.replace(/\/api\/?$/, ""), {
       auth: { token },
     });
 
